@@ -59,7 +59,6 @@ def affine_backward(dout, cache):
     # 
     dx = dout @ w.T
     dx = dx.reshape(x.shape)
-    print(x.shape)
     dw = x.reshape(N, -1).T @ dout
     db = np.ones(N) @ dout
     
@@ -107,7 +106,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
-    dx = (x > 0)
+    dx = (x > 0) * dout
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
