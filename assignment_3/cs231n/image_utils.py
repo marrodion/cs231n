@@ -3,9 +3,15 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import range
 import urllib.request, urllib.error, urllib.parse, os, tempfile
+import numpy as np
 
 import numpy as np
-from scipy.misc import imread, imresize
+from imageio import imread
+from PIL import Image
+
+
+def imresize(arr, size, **kwargs):
+    return np.array(Image.fromarray(arr).resize(size, **kwargs))
 
 """
 Utility functions used for viewing and processing images.

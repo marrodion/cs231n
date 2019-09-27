@@ -21,6 +21,7 @@ h5py
 html5lib
 idna
 idna-ssl
+imageio
 ipykernel
 ipython
 ipython-genutils

@@ -103,6 +103,13 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# shit
+# IDE
 *.DS_Store
 .idea/
+.vscode
+
+# Data files
+*.h5
+*.npz
+coco_captioning/
+*.ckpt.*
