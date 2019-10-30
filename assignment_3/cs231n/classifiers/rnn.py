@@ -104,6 +104,7 @@ class CaptioningRNN(object):
 
         # Weight and bias for the affine transform from image features to initial
         # hidden state
+        # (D, H), H
         W_proj, b_proj = self.params['W_proj'], self.params['b_proj']
 
         # Word embedding matrix
@@ -141,8 +142,20 @@ class CaptioningRNN(object):
         # in your implementation, if needed.                                       #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        # features: (N, D)
+        # captions: (N, T)
+        h0, proj_cache = affine_forward(features, W_proj, b_proj)
+        embed, embed_cache = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == 'rnn':
+          h_states, h_caches = rnn_forward(embed, h0, Wx, Wh, b)
+        
+        scores, temp_aff_cache = temporal_affine_forward(h_states, W_vocab, b_vocab)
+        loss, dloss = temporal_softmax_loss(scores, captions_out, mask)
 
-        pass
+        dtemp_aff, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dloss, temp_aff_cache)
+        dh, dh0, grads['Wx'], grads['Wh'], grads['b']   = rnn_backward(dtemp_aff, h_caches)
+        grads['W_embed'] = word_embedding_backward(dh, embed_cache)
+        _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, proj_cache)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -210,8 +223,32 @@ class CaptioningRNN(object):
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        # prev_h = (N, M), features = (N, D)
+        prev_h, _ = affine_forward(features, W_proj, b_proj)
+        # prev_word = (N, 1), captions = (N, max_length)
+        prev_word = self._start
+        # print(f"Prev word: {prev_word.shape}")
+        captions[:, 0] = prev_word
+        T = max_length
+        for i in range(1, T):
+          # emb = (N, T, D) = (N, 1, D)
+          emb, _ = word_embedding_forward(prev_word, W_embed)
+          print(f"Embedding shape before squeeze: {emb.shape}")
+          # print(f"Embedding shape after squeeze: {emb.shape}")
+          # h = (N, M)
+          h, _ = rnn_step_forward(emb, prev_h, Wx, Wh, b)
+          print(f"Hidden shape: {h.shape}")
+          # score = (N, M)
+          score, _ = affine_forward(h, W_vocab, b_vocab)          
+          # idx = (N,)
+          print(f"Score before squeeze: {score.shape}")
+          # print(f"Score after squeeze: {score.shape}")
+          idx = np.argmax(score, axis=1)          
+          # print(idx.shape)
+          captions[:, i] = idx
+          prev_h = h
+          prev_word = idx
 
-        pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
