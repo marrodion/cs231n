@@ -148,14 +148,25 @@ class CaptioningRNN(object):
         embed, embed_cache = word_embedding_forward(captions_in, W_embed)
         if self.cell_type == 'rnn':
           h_states, h_caches = rnn_forward(embed, h0, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+          h_states, h_caches = lstm_forward(embed, h0, Wx, Wh, b)
+        else:
+          pass
         
         scores, temp_aff_cache = temporal_affine_forward(h_states, W_vocab, b_vocab)
         loss, dloss = temporal_softmax_loss(scores, captions_out, mask)
 
         dtemp_aff, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dloss, temp_aff_cache)
-        dh, dh0, grads['Wx'], grads['Wh'], grads['b']   = rnn_backward(dtemp_aff, h_caches)
+        if self.cell_type == 'rnn':
+          dh, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dtemp_aff, h_caches)
+        elif self.cell_type == 'lstm':
+          dh, dh0, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dtemp_aff, h_caches)
+        else:
+          pass
         grads['W_embed'] = word_embedding_backward(dh, embed_cache)
         _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, proj_cache)
+
+        
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -225,6 +236,8 @@ class CaptioningRNN(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # prev_h = (N, M), features = (N, D)
         prev_h, _ = affine_forward(features, W_proj, b_proj)
+        if self.cell_type == 'lstm':
+          prev_c = np.zeros_like(prev_h)
         # prev_word = (N, 1), captions = (N, max_length)
         prev_word = self._start
         # print(f"Prev word: {prev_word.shape}")
@@ -233,15 +246,20 @@ class CaptioningRNN(object):
         for i in range(1, T):
           # emb = (N, T, D) = (N, 1, D)
           emb, _ = word_embedding_forward(prev_word, W_embed)
-          print(f"Embedding shape before squeeze: {emb.shape}")
+          # print(f"Embedding shape before squeeze: {emb.shape}")
           # print(f"Embedding shape after squeeze: {emb.shape}")
           # h = (N, M)
-          h, _ = rnn_step_forward(emb, prev_h, Wx, Wh, b)
-          print(f"Hidden shape: {h.shape}")
+          if self.cell_type == 'rnn':
+            h, _ = rnn_step_forward(emb, prev_h, Wx, Wh, b)
+          elif self.cell_type == 'lstm':
+            h, prev_c, _ = lstm_step_forward(emb, prev_h, prev_c, Wx, Wh, b)
+          else: 
+            pass
+          # print(f"Hidden shape: {h.shape}")
           # score = (N, M)
           score, _ = affine_forward(h, W_vocab, b_vocab)          
           # idx = (N,)
-          print(f"Score before squeeze: {score.shape}")
+          # print(f"Score before squeeze: {score.shape}")
           # print(f"Score after squeeze: {score.shape}")
           idx = np.argmax(score, axis=1)          
           # print(idx.shape)
